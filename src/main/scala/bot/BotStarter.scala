@@ -11,6 +11,7 @@ import com.softwaremill.sttp.SttpBackendOptions
 import com.softwaremill.sttp.okhttp.{OkHttpBackend, OkHttpFutureBackend}
 import slogging.{LogLevel, LoggerConfig, PrintLoggerFactory}
 
+import scala.collection.concurrent.TrieMap
 import scala.collection.mutable
 import scala.collection.mutable.Queue
 import scala.concurrent.duration.Duration
@@ -19,6 +20,33 @@ import scala.io.Source
 
 class BotStarter(override val client: RequestHandler[Future]) extends TelegramBot
   with Polling
-  with Commands[Future]{
+  with Commands[Future] {
 
+  val registeredUsers: mutable.Set[User] = mutable.Set[User]()
+
+  onCommand("/start") { implicit msg =>
+    msg.from match {
+      case None => reply("Register error").void
+      case Some(user) => {
+          registeredUsers += user
+          reply("You're registered.\n Your id is ${user.id}").void
+      }
+    }
+  }
+
+}
+
+object BotStarter {
+  def main(args: Array[String]): Unit = {
+    implicit val ec: ExecutionContext = ExecutionContext.global
+    implicit val backend = OkHttpFutureBackend(
+      SttpBackendOptions.Default.socksProxy("ps8yglk.ddns.net", 11999)
+    )
+
+    val fileSource = Source.fromFile("token.txt")
+    val token = fileSource.mkString
+    fileSource.close()
+    val bot = new BotStarter(new FutureSttpClient(token))
+    Await.result(bot.run(), Duration.Inf)
+  }
 }
