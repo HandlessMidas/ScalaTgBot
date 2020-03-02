@@ -29,7 +29,7 @@ class BotStarter(override val client: RequestHandler[Future]) extends TelegramBo
       case None => reply("Register error").void
       case Some(user) => {
           registeredUsers += user
-          reply("You're registered.\n Your id is ${user.id}").void
+          reply(s"You're registered.\n Your id is ${user.id}").void
       }
     }
   }
