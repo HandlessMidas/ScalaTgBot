@@ -34,6 +34,13 @@ class BotStarter(override val client: RequestHandler[Future]) extends TelegramBo
     }
   }
 
+  onCommand("/users") { implicit msg =>
+    var usersString = ""
+    registeredUsers.foreach {
+      it => usersString += s"${it.firstName} ${it.lastName}\n"
+    }
+    reply(usersString).void
+  }
 }
 
 object BotStarter {
