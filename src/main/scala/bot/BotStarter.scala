@@ -7,7 +7,7 @@ import com.bot4s.telegram.api.declarative.Commands
 import com.bot4s.telegram.clients.{FutureSttpClient, ScalajHttpClient}
 import com.bot4s.telegram.future.{Polling, TelegramBot}
 import com.bot4s.telegram.models.{Message, User}
-import com.softwaremill.sttp.SttpBackendOptions
+import com.softwaremill.sttp.{SttpBackend, SttpBackendOptions}
 import com.softwaremill.sttp.okhttp.{OkHttpBackend, OkHttpFutureBackend}
 import slogging.{LogLevel, LoggerConfig, PrintLoggerFactory}
 
@@ -49,6 +49,7 @@ class BotStarter(override val client: RequestHandler[Future]) extends TelegramBo
         messagesUsers(user.id.toString).foreach { p =>
           reply(s"From: ${p._1}\n${p._2}\n\n")
         }
+        messagesUsers(user.id.toString).clear()
         reply("").void
     }
   }
@@ -69,7 +70,7 @@ class BotStarter(override val client: RequestHandler[Future]) extends TelegramBo
           messagesUsers(id) = mutable.ListBuffer()
         }
         messagesUsers(id) += Tuple2(from_id.toString, text)
-        reply(s"Message was sent to ${id}").void
+        reply(s"Message was sent to $id").void
     }
   }
 }
@@ -77,7 +78,7 @@ class BotStarter(override val client: RequestHandler[Future]) extends TelegramBo
 object BotStarter {
   def main(args: Array[String]): Unit = {
     implicit val ec: ExecutionContext = ExecutionContext.global
-    implicit val backend = OkHttpFutureBackend(
+    implicit val backend: SttpBackend[Future, Nothing] = OkHttpFutureBackend(
       SttpBackendOptions.Default.socksProxy("ps8yglk.ddns.net", 11999)
     )
 
