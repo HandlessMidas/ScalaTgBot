@@ -23,9 +23,10 @@ import scala.io.Source
 import com.softwaremill.sttp._
 import com.softwaremill.sttp.json4s._
 import org.json4s.native.Serialization
+import slick.lifted.TableQuery
 
 class BotStarter(override val client: RequestHandler[Future], val service: Service,
-                 val userHandler: UserHandler, val messageHandler: MessageHandler) extends TelegramBot
+                 val userHandler: DBUserHandler, val messageHandler: DBMessageHandler) extends TelegramBot
   with Polling
   with Commands[Future] {
 
@@ -33,22 +34,23 @@ class BotStarter(override val client: RequestHandler[Future], val service: Servi
     msg.from match {
       case None => reply("Register error").void
       case Some(user) =>
-        userHandler.register(user)
-        reply(s"You're registered.\nYour id is ${user.id}").void
+        userHandler.register(user).flatMap(_ =>
+          reply(s"You're registered.\nYour id is ${user.id}").void)
     }
   }
 
   onCommand("/users") { implicit msg =>
-    reply(userHandler.show()).void
+    userHandler.show.flatMap(reply(_).void)
   }
 
   onCommand("/check") { implicit msg =>
     msg.from match {
       case None => reply("Error.").void
       case Some(user) =>
-        val messages = messageHandler.show(user.id.toString)
-        messageHandler.clear(user.id.toString)
-        reply(messages).void
+        messageHandler.show(user.id.toString).flatMap(messages =>
+          messageHandler.clear(user.id.toString).flatMap(_ =>
+          reply(messages).void)
+        )
     }
   }
 
@@ -81,14 +83,24 @@ object BotStarter {
       SttpBackendOptions.Default.socksProxy("ps8yglk.ddns.net", 11999)
     )
 
-    val userHandler = new UserHandler
-    val messageHandler = new MessageHandler
+    val users = TableQuery[Users]
+    val messages = TableQuery[Messages]
+    val userHandler = new DBUserHandler(users, messages)
+    val messageHandler = new DBMessageHandler(users, messages)
+
+    val service: Service = new Service()
+
     val fileSource = Source.fromFile("token.txt")
     val token = fileSource.mkString
     fileSource.close()
 
-    val service: Service = new Service()
-    val bot = new BotStarter(new FutureSttpClient(token), service, userHandler, messageHandler)
-    Await.result(bot.run(), Duration.Inf)
+    val init = for {
+      _ <- userHandler.init()
+      _ <- messageHandler.init()
+      bot = new BotStarter(new FutureSttpClient(token), service,
+        userHandler, messageHandler)
+      _ <- bot.run()
+    } yield ()
+    Await.result(init, Duration.Inf)
   }
 }
