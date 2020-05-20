@@ -35,4 +35,11 @@ class DBUserHandler(users: TableQuery[Users], messages: TableQuery[Messages]) {
     } yield allUsers
     database.run(req).flatMap(seq => Future(seq.map(it => s"${it._2}, id: ${it._1}").mkString("\n")))
   }
+
+  def getId(username: String): Future[Int] = {
+    val transaction = for {
+      user <- users.filter(it => it.username === username).result
+    } yield user
+    database.run(transaction).flatMap(seq => Future(seq.map(it => it._1).head))
+  }
 }

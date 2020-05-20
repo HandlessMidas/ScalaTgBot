@@ -21,9 +21,9 @@ class DBMessageHandler(users: TableQuery[Users], messages: TableQuery[Messages])
     database.run(messages.schema.createIfNotExists)
   }
 
-  def send(senderId: String, recieverId: String, message: String): Unit = {
+  def send(senderId: String, receiverId: String, message: String): Unit = {
     val req = for {
-      _ <- messages += (-1, message, senderId.toInt, recieverId.toInt)
+      _ <- messages += (-1, message, senderId.toInt, receiverId.toInt)
     } yield()
     database.run(req)
   }

@@ -26,7 +26,9 @@ import org.json4s.native.Serialization
 import slick.lifted.TableQuery
 
 class BotStarter(override val client: RequestHandler[Future], val service: Service,
-                 val userHandler: DBUserHandler, val messageHandler: DBMessageHandler) extends TelegramBot
+                 val userHandler: DBUserHandler,
+                 val messageHandler: DBMessageHandler,
+                 val statsHandler : DBStatsHandler) extends TelegramBot
   with Polling
   with Commands[Future] {
 
@@ -47,10 +49,12 @@ class BotStarter(override val client: RequestHandler[Future], val service: Servi
     msg.from match {
       case None => reply("Error.").void
       case Some(user) =>
-        messageHandler.show(user.id.toString).flatMap(messages =>
-          messageHandler.clear(user.id.toString).flatMap(_ =>
-          reply(messages).void)
-        )
+        val tmp = messageHandler.show(user.id.toString)
+        messageHandler.clear(user.id.toString)
+        for {
+          messages <- tmp
+          _ <- reply(messages).void
+        } yield ()
     }
   }
 
@@ -72,7 +76,33 @@ class BotStarter(override val client: RequestHandler[Future], val service: Servi
   }
 
   onCommand("/cat") { implicit msg =>
-    service.getCat.flatMap(reply(_)).void
+    msg.from match {
+      case None => reply("Cats error.").void
+      case Some(user) =>
+        service.getCat.flatMap(link => for {
+          _ <- statsHandler.add(user.id.toString, link)
+          _ <- reply(link)
+        } yield ())
+    }
+  }
+
+  onCommand("/stats") { implicit msg =>
+    msg.from match {
+      case None => reply("Stats error.").void
+      case Some (x) => withArgs { args =>
+        val id = if (args.isEmpty) {
+          x.id.toString
+        } else {
+          val arg = args.head
+          if (arg forall Character.isDigit) {
+            arg
+          } else {
+            userHandler.getId(arg).toString
+          }
+        }
+        statsHandler.show(id).flatMap(reply(_).void)
+      }
+    }
   }
 }
 
@@ -85,8 +115,10 @@ object BotStarter {
 
     val users = TableQuery[Users]
     val messages = TableQuery[Messages]
+    val stats = TableQuery[Stats]
     val userHandler = new DBUserHandler(users, messages)
     val messageHandler = new DBMessageHandler(users, messages)
+    val statsHandler = new DBStatsHandler(stats)
 
     val service: Service = new Service()
 
@@ -98,7 +130,7 @@ object BotStarter {
       _ <- userHandler.init()
       _ <- messageHandler.init()
       bot = new BotStarter(new FutureSttpClient(token), service,
-        userHandler, messageHandler)
+        userHandler, messageHandler, statsHandler)
       _ <- bot.run()
     } yield ()
     Await.result(init, Duration.Inf)
