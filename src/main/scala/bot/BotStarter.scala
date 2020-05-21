@@ -41,6 +41,17 @@ class BotStarter(override val client: RequestHandler[Future], val service: Servi
     }
   }
 
+  onCommand("/get_id") { implicit msg =>
+    msg.from match {
+      case None => reply("Register error").void
+      case Some(user) =>
+        user.username match {
+          case None => reply("pizdec").void
+          case Some (str) => userHandler.getId (str).flatMap (it => reply (s"$it").void)
+        }
+    }
+  }
+
   onCommand("/users") { implicit msg =>
     userHandler.show.flatMap(reply(_).void)
   }
