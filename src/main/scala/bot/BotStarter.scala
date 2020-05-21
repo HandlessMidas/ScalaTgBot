@@ -78,10 +78,11 @@ class BotStarter(override val client: RequestHandler[Future], val service: Servi
     msg.from match {
       case None => reply("Cats error.").void
       case Some(user) =>
-        service.getCat.flatMap(link => for {
-          _ <- statsHandler.add(user.id.toString, link)
+        for {
+          link <- service.getCat
+          - <- statsHandler.add(user.id.toString, link)
           _ <- reply(link)
-        } yield ())
+        } yield ()
     }
   }
 
@@ -89,17 +90,26 @@ class BotStarter(override val client: RequestHandler[Future], val service: Servi
     msg.from match {
       case None => reply("Stats error.").void
       case Some (x) => withArgs { args =>
-        val id = if (args.isEmpty) {
-          x.id.toString
+        if (args.isEmpty) {
+          for {
+            s <- statsHandler.show(x.id.toString)
+            _ <- reply(s)
+          } yield ()
         } else {
           val arg = args.head
           if (arg forall Character.isDigit) {
-            arg
+            for {
+              s <- statsHandler.show(arg)
+              _ <- reply(s)
+            } yield ()
           } else {
-            userHandler.getId(arg).toString
+            for {
+              id <- userHandler.getId(arg)
+              s <- statsHandler.show(id.toString)
+              _ <- reply(s)
+            } yield ()
           }
         }
-        statsHandler.show(id).flatMap(reply(_).void)
       }
     }
   }
