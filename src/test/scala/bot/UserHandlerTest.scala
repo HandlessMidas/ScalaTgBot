@@ -3,10 +3,18 @@ package bot
 import com.bot4s.telegram.models.User
 import org.scalatest.flatspec.AnyFlatSpec
 import org.scalatest.matchers.must.Matchers
+import slick.lifted.TableQuery
 
+import scala.concurrent.{Await, Future}
+import scala.concurrent.ExecutionContext.Implicits.global
+import scala.concurrent.duration.Duration
 
 class UserHandlerTest extends AnyFlatSpec with Matchers {
-  val userHandler = new UserHandler
+  val usersT = TableQuery[Users]
+  val messagesT = TableQuery[Messages]
+
+  val userHandler = new DBUserHandler(usersT)
+  userHandler.init()
 
   val users : List[User] = List(
     User(0, isBot = false, "Shrek", Some("1")),
@@ -24,13 +32,9 @@ class UserHandlerTest extends AnyFlatSpec with Matchers {
     "Mario , id: 4\n"
   )
 
-  "Descriptions" should "match" in {
-    users.zipWithIndex.foreach { x => assert(userHandler.getUserDescription(x._1) == usersDescriptions(x._2)) }
-  }
-
   "Register" should "add Users" in {
-    users.foreach {userHandler.register }
-    val tmp: Array[String] = userHandler.show().split('\n')
+    users.foreach{ userHandler.register }
+    val tmp: Array[String] = Await.result(userHandler.show, Duration.Inf).split('\n')
     assert(tmp.length == 5)
   }
 
@@ -38,10 +42,9 @@ class UserHandlerTest extends AnyFlatSpec with Matchers {
     userHandler.register(users(0))
     userHandler.register(users(2))
     userHandler.register(users(4))
-    val tmp: Array[String] = userHandler.show().split('\n')
+    val tmp: Array[String] = Await.result(userHandler.show, Duration.Inf).split('\n')
     assert(tmp.contains(usersDescriptions(0).dropRight(1)))
     assert(tmp.contains(usersDescriptions(2).dropRight(1)))
     assert(tmp.contains(usersDescriptions(4).dropRight(1)))
   }
-
 }
