@@ -1,5 +1,6 @@
 package bot
 
+import slick.jdbc.H2Profile
 import scala.concurrent.{Await, Future}
 import slick.jdbc.H2Profile.api._
 
@@ -7,7 +8,7 @@ import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.duration.Duration
 
 class Messages(tag: Tag) extends Table[(Int, String, Int, Int)](tag, "Messages"){
-  def id = column[Int]("Id", O.PrimaryKey)
+  def id = column[Int]("Id", O.PrimaryKey, O.AutoInc)
   def message = column[String]("Message")
   def senderId = column[Int]("SenderId")
   def receiverId = column[Int]("ReceiverId")
@@ -21,7 +22,7 @@ class DBMessageHandler(users: TableQuery[Users], messages: TableQuery[Messages])
     database.run(messages.schema.createIfNotExists)
   }
 
-  def send(senderId: String, receiverId: String, message: String): Unit = {
+  def send(senderId: String, receiverId: String, message: String): Future[Unit] = {
     val req = for {
       _ <- messages += (-1, message, senderId.toInt, receiverId.toInt)
     } yield()

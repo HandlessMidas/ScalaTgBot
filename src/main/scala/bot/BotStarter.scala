@@ -60,12 +60,8 @@ class BotStarter(override val client: RequestHandler[Future], val service: Servi
     msg.from match {
       case None => reply("Error.").void
       case Some(user) =>
-        val tmp = messageHandler.show(user.id.toString)
-        messageHandler.clear(user.id.toString)
-        for {
-          messages <- tmp
-          _ <- reply(messages).void
-        } yield ()
+        messageHandler.show(user.id.toString).flatMap(it => reply(it).void).void
+        messageHandler.clear(user.id.toString).void
     }
   }
 
@@ -81,7 +77,7 @@ class BotStarter(override val client: RequestHandler[Future], val service: Servi
       case Some(s) =>
         val id: String = s.slice(6, 15)
         val text: String = s.slice(16, s.length)
-        messageHandler.send(from_id.toString, id, text)
+        messageHandler.send(from_id.toString, id, text).void
         reply(s"Message was sent to $id").void
     }
   }
