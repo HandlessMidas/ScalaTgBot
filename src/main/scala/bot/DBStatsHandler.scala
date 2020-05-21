@@ -31,6 +31,10 @@ class DBStatsHandler(stats: TableQuery[Stats]) {
     val req = for {
       cats <- stats.filter(it => it.userId === id.toInt).result
     } yield cats
-    database.run(req).flatMap(seq => Future(seq.map(it => s"link:${it._3}, id: ${it._2}").mkString("\n")))
+    database.run(req).flatMap(seq => Future(seq.map(it => s"Link: ${it._3}").mkString("\n")))
+  }
+
+  def clear(id: String): Future[Unit] = {
+    database.run(stats.delete).flatMap(_ => Future())
   }
 }

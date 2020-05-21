@@ -41,17 +41,6 @@ class BotStarter(override val client: RequestHandler[Future], val service: Servi
     }
   }
 
-  onCommand("/get_id") { implicit msg =>
-    msg.from match {
-      case None => reply("Register error").void
-      case Some(user) =>
-        user.username match {
-          case None => reply("pizdec").void
-          case Some (str) => userHandler.getId (str).flatMap (it => reply (s"$it").void)
-        }
-    }
-  }
-
   onCommand("/users") { implicit msg =>
     userHandler.show.flatMap(reply(_).void)
   }
@@ -60,8 +49,11 @@ class BotStarter(override val client: RequestHandler[Future], val service: Servi
     msg.from match {
       case None => reply("Error.").void
       case Some(user) =>
-        messageHandler.show(user.id.toString).flatMap(it => reply(it).void).void
-        messageHandler.clear(user.id.toString).void
+        for {
+          ans <- messageHandler.show(user.id.toString)
+          _ <- reply(ans)
+          _ <- messageHandler.clear(user.id.toString)
+        } yield ()
     }
   }
 
@@ -77,7 +69,7 @@ class BotStarter(override val client: RequestHandler[Future], val service: Servi
       case Some(s) =>
         val id: String = s.slice(6, 15)
         val text: String = s.slice(16, s.length)
-        messageHandler.send(from_id.toString, id, text).void
+        messageHandler.send(from_id.toString, id, text)
         reply(s"Message was sent to $id").void
     }
   }
@@ -123,8 +115,8 @@ object BotStarter {
     val users = TableQuery[Users]
     val messages = TableQuery[Messages]
     val stats = TableQuery[Stats]
-    val userHandler = new DBUserHandler(users, messages)
-    val messageHandler = new DBMessageHandler(users, messages)
+    val userHandler = new DBUserHandler(users)
+    val messageHandler = new DBMessageHandler(messages)
     val statsHandler = new DBStatsHandler(stats)
 
     val service: Service = new Service()
@@ -136,6 +128,7 @@ object BotStarter {
     val init = for {
       _ <- userHandler.init()
       _ <- messageHandler.init()
+      _ <- statsHandler.init()
       bot = new BotStarter(new FutureSttpClient(token), service,
         userHandler, messageHandler, statsHandler)
       _ <- bot.run()

@@ -15,7 +15,7 @@ class Users(tag: Tag) extends Table[(Int, String, String)](tag, "Messages"){
   def * = (id, name, username)
 }
 
-class DBUserHandler(users: TableQuery[Users], messages: TableQuery[Messages]) {
+class DBUserHandler(users: TableQuery[Users]) {
   lazy val database = Database.forConfig("h2mem1")
 
   def init(): Future[Unit] = {

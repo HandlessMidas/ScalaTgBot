@@ -1,0 +1,5 @@
+package bot
+
+class StatsHandlerTest {
+
+}

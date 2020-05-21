@@ -18,5 +18,5 @@ libraryDependencies ++= Seq(
 )
 
 libraryDependencies += "com.h2database" % "h2" % "1.4.200"
- libraryDependencies += "org.scalactic" %% "scalactic" % "3.1.1"
+libraryDependencies += "org.scalactic" %% "scalactic" % "3.1.1"
 libraryDependencies += "org.scalatest" %% "scalatest" % "3.1.1" % "test"

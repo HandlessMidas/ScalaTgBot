@@ -15,7 +15,7 @@ class Messages(tag: Tag) extends Table[(Int, String, Int, Int)](tag, "Messages")
   def * = (id, message, senderId, receiverId)
 }
 
-class DBMessageHandler(users: TableQuery[Users], messages: TableQuery[Messages]) {
+class DBMessageHandler(messages: TableQuery[Messages]) {
   lazy val database = Database.forConfig("h2mem1")
 
   def init(): Future[Unit] = {
@@ -34,7 +34,7 @@ class DBMessageHandler(users: TableQuery[Users], messages: TableQuery[Messages])
       idMessages <- messages.filter(it => it.receiverId === id.toInt).result
     } yield idMessages
     database.run(req).flatMap(seq => Future (
-      seq.map(it => s"From ${it._3}\n${it._2}\n").mkString("\n"))
+      seq.map(it => s"From: ${it._3}\n${it._2}\n").mkString("\n"))
     )
   }
 
