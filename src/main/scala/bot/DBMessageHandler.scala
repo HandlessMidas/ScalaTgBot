@@ -16,15 +16,17 @@ class Messages(tag: Tag) extends Table[(Int, String, Int, Int)](tag, "Messages")
 
 class DBMessageHandler(users: TableQuery[Users], messages: TableQuery[Messages]) {
   lazy val database = Database.forConfig("h2mem1")
+  var messageId = 0
 
   def init(): Future[Unit] = {
     database.run(messages.schema.createIfNotExists)
   }
 
-  def send(senderId: String, recieverId: String, message: String): Unit = {
+  def send(senderId: String, receiverId: String, message: String): Future[Unit] = {
     val req = for {
-      _ <- messages += (-1, message, senderId.toInt, recieverId.toInt)
+      _ <- messages += (messageId, message, senderId.toInt, receiverId.toInt)
     } yield()
+    messageId += 1
     database.run(req)
   }
 
@@ -38,6 +40,6 @@ class DBMessageHandler(users: TableQuery[Users], messages: TableQuery[Messages])
   }
 
     def clear(id: String): Future[Unit] = {
-      database.run(messages.delete).flatMap(_ => Future())
+      database.run(messages.filter(it => it.receiverId === id.toInt).delete).flatMap(_ => Future())
     }
 }

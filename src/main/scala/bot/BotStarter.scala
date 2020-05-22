@@ -55,7 +55,7 @@ class BotStarter(override val client: RequestHandler[Future], val service: Servi
   }
 
   onCommand("/send") { implicit msg =>
-    var from_id : Int = 0
+    var from_id: Int = 0
     msg.from match {
       case None => from_id = 0
       case Some(user) => from_id = user.id
