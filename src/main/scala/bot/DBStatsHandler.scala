@@ -35,6 +35,6 @@ class DBStatsHandler(stats: TableQuery[Stats]) {
   }
 
   def clear(id: String): Future[Unit] = {
-    database.run(stats.delete).flatMap(_ => Future())
+    database.run(stats.filter(_.userId === id.toInt).delete).flatMap(_ => Future())
   }
 }

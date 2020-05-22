@@ -39,6 +39,6 @@ class DBMessageHandler(messages: TableQuery[Messages]) {
   }
 
     def clear(id: String): Future[Unit] = {
-      database.run(messages.delete).flatMap(_ => Future())
+      database.run(messages.filter(_.receiverId === id.toInt).delete).flatMap(_ => Future())
     }
 }
